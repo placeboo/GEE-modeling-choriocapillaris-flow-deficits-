@@ -226,11 +226,7 @@ colnames(dist_tmp) = paste("dist.f", c(2:dist_level), sep = "")
 mydata = as.matrix(cbind(mydata, dist_tmp))
 ```
 ## Area
-```{r prediction function}
-library(prediction)
-mydata.df = data.frame(age = rep(1:100, each = 8), dist.f = as.factor(rep(1:8, 100)))
-myata_y.pred = prediction(geelm, newdata = dat2)
-```
+
 
 ```{r AreaMydata, fig.cap="Area: prediction with 95% CI"}
 mydata_y = mydata %*% as.matrix(coef(geelm))

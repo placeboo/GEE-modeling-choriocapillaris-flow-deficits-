@@ -1,4 +1,12 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
+*.Rproj.user
+*.Rhistory
+*.RData
+*.Ruserdata
+*.csv
+*.html
+*.Rproj
+*.pdf
+*.png
+*.gitignore
+*.lyx
+*.docx
