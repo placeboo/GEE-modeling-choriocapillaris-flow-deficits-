@@ -1,0 +1,331 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\begin_preamble
+\def\T{{ \mathrm{\scriptscriptstyle T} }}
+\end_preamble
+\use_default_options true
+\begin_modules
+theorems-ams-bytype
+\end_modules
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing onehalf
+\use_hyperref true
+\pdf_bookmarks true
+\pdf_bookmarksnumbered true
+\pdf_bookmarksopen true
+\pdf_bookmarksopenlevel 3
+\pdf_breaklinks false
+\pdf_pdfborder false
+\pdf_colorlinks false
+\pdf_backref false
+\pdf_pdfusetitle true
+\papersize letterpaper
+\use_geometry true
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date false
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\leftmargin 2cm
+\topmargin 3cm
+\rightmargin 2cm
+\bottommargin 3cm
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation 0bp
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Notes for GEE Prediction 
+\end_layout
+
+\begin_layout Author
+Jiaqi Yin
+\end_layout
+
+\begin_layout Standard
+Notation: use the form 
+\begin_inset Formula $Z$
+\end_inset
+
+ as scalar, 
+\begin_inset Formula $\mathbf{Z}$
+\end_inset
+
+ as vector, 
+\begin_inset Formula $\mathbb{Z}$
+\end_inset
+
+ as matirx.
+\end_layout
+
+\begin_layout Section
+Model
+\end_layout
+
+\begin_layout Subsection
+Setting
+\end_layout
+
+\begin_layout Standard
+Suppose there are 
+\begin_inset Formula $n$
+\end_inset
+
+ patients.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $\mathbf{Y}_{i}=(Y_{i1},\ldots,Y_{im_{i}})^{\T}$
+\end_inset
+
+, 
+\begin_inset Formula $Y_{ij}$
+\end_inset
+
+, patient 
+\begin_inset Formula $i$
+\end_inset
+
+ measured at 
+\begin_inset Formula $j^{th}$
+\end_inset
+
+ time point 
+\begin_inset Formula $(i=1,\ldots,n;j=1,\ldots,m_{i})$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $\mathbb{X}_{i}=(\mathbf{X}_{i1},\ldots\mathbf{X}_{im_{i}})^{\T}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Itemize
+\begin_inset Formula $\mathbf{X}_{ij}=(X_{ij1},\ldots X_{ijp})^{\T}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Under our setting, 
+\begin_inset Formula $\mathbf{X}_{ij}=(1,\text{{age}}_{i},\text{dist}_{ij})^{\T}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Mean Model
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\mathbb{E}(Y_{ij}\mid\mathbb{X}_{i})=\boldsymbol{\beta}^{\T}\mathbf{X}_{ij}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+where 
+\begin_inset Formula $\boldsymbol{\beta}=(\beta_{0},\beta_{1},\beta_{2})^{\T}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Subsection
+Working Covariance
+\end_layout
+
+\begin_layout Standard
+For each patient, we assume independence correlation models.
+ Then the variance-covariance matrix 
+\begin_inset Formula $Cov(\mathbf{Y}_{i}\mid\mathbb{X}_{i})$
+\end_inset
+
+ is a diagonal matrix.
+\end_layout
+
+\begin_layout Section
+Estimation
+\end_layout
+
+\begin_layout Standard
+Using the function 
+\begin_inset Formula ${\tt geese}$
+\end_inset
+
+ in Rpackage 
+\begin_inset Formula ${\tt geepack}$
+\end_inset
+
+, we are able to have estimates 
+\begin_inset Formula $\hat{\boldsymbol{\beta}}$
+\end_inset
+
+ and their robust standard deviation 
+\begin_inset Formula $\hat{\sigma}_{\beta}$
+\end_inset
+
+ as well as variance-covariance matrix 
+\begin_inset Formula $\hat{\Sigma}_{\beta}$
+\end_inset
+
+.
+ We also have predicted 
+\begin_inset Formula $\hat{y}_{ij}=\hat{\boldsymbol{\beta}}^{\T}\mathbf{x}_{ij}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Section
+Prediction
+\end_layout
+
+\begin_layout Standard
+We want to predict new measure 
+\begin_inset Formula $y^{*}$
+\end_inset
+
+ based on new predictor 
+\begin_inset Formula $\mathbf{x}^{*}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Point predition: 
+\begin_inset Formula $\hat{y}(\mathbf{x}^{*})=\hat{\boldsymbol{\beta}}^{\T}\mathbf{x}^{*}$
+\end_inset
+
+ .
+ TWO source of uncertainty of 
+\begin_inset Formula $\hat{y}$
+\end_inset
+
+: 
+\end_layout
+
+\begin_layout Enumerate
+\begin_inset Formula $\hat{\boldsymbol{\beta}}$
+\end_inset
+
+, the estimates.
+ 
+\begin_inset Formula $Var(\hat{y}\mid\mathbf{x}^{*})=\mathbf{x}^{*\T}\hat{\Sigma}_{\beta}\mathbf{x}^{*}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Enumerate
+Random error of new observation.
+ 
+\begin_inset Formula $s_{y\mid x}^{2}=\sum_{i=1}^{n}\frac{m_{i}}{\sum_{i=1}^{n}m_{i}}\frac{\sum_{j=1}^{m_{i}}(\hat{y}_{i}-y_{ij})^{2}}{m_{i}}=\sum_{i=1}^{n}\frac{\sum_{j=1}^{m_{i}}(\hat{y}_{ij}-y_{ij})^{2}}{\sum_{i=1}^{n}m_{i}}$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Therefore the standard error of prediction 
+\begin_inset Formula 
+\[
+SE_{\hat{y}\mid x^{*}}^{2}=Var(\hat{y}\mid\mathbf{x}^{*})+s_{y\mid x}^{2}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+Finally, we have the prediction interval
+\end_layout
+
+\begin_layout Standard
+\begin_inset Formula 
+\[
+\hat{y}(\mathbf{x}^{*})\pm1.96\cdot SE_{\hat{y}\mid x^{*}}
+\]
+
+\end_inset
+
+
+\end_layout
+
+\end_body
+\end_document
