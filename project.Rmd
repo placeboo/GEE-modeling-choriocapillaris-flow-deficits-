@@ -65,7 +65,7 @@ names(dat) = c("measure", "age", "id", "dist")
 dat = dat %>% filter(dist != 5)
 dat$dist.f = as.factor(dat$dist)
 
-dat_axis = read_csv("ThresMinorAxis3x3.csv")
+dat_axis = read_csv("ThresMinorAxis3x3.csv", col_names = FALSE)
 names(dat_axis) = c("measure", "age", "id", "dist")
 dat_axis = dat_axis %>% filter(dist != 5)
 dat_axis$dist.f = as.factor(dat_axis$dist)
@@ -243,6 +243,43 @@ dat2_axis %>% group_by(age, dist.f) %>% summarise(n = n()) %>%
         scale_x_continuous(breaks = seq(15, 90, 5)) +
         theme_bw()
 ```
+### More plots
+In this section, we blend all the measures togather regardless of clusters. Measures are stratified by distance and age. Then, we are able to have the esimated standard deviation, 2.5% quantile, and 97.5% quantile for measures.
+
+```{r all measure axis dataframe}
+measure_axis.df = dat_axis %>% 
+        group_by(age, dist.f) %>%
+        mutate(L = quantile(measure, 0.025), U = quantile(measure, 0.975), mean = mean(measure), SD = sd(measure), l = mean - SD, u = mean + SD)
+```
+
+```{r all-axis-measures-with-quan-band, fig.cap="Measures regradless of clusters, with 95% confident intereval"}
+measure_axis.df %>% 
+        ggplot(aes(x = age)) +
+        geom_point(aes(y = measure), size = 2, color = "gray", alpha = 0.5) +
+        geom_ribbon(aes(ymin=L, ymax = U), alpha = 0.3, color = "red") + 
+        x + 
+        facet_wrap(~ dist.f)  +
+        xlab("Age") + 
+        ylab("Measure") + 
+        theme_bw() + 
+        thm
+```
+```{r all-axis-measures-with-quantile-mean-sd, fig.cap="Axis: Measures regradless of clusters, with mean, sd, and quantiles"}
+measure_axis.df %>% 
+        ggplot(aes(x = age)) +
+        geom_point(aes(y = measure), size = 2, alpha = 0.5, color = "gray") +
+        geom_line(aes(y = mean), color = "blue") + 
+        geom_line(aes(y = L), color = "red") + 
+        geom_line(aes(y = U), color = "red") +
+        geom_line(aes(y = u), color = "green") +  
+        x + 
+        facet_wrap(~ dist.f)  +
+        xlab("Age") + 
+        ylab("Measure") + 
+        theme_bw() + 
+        thm
+```
+
 
 # Regression
 
@@ -265,8 +302,9 @@ interval is reported in the following table
 geelm_axis = geeglm(measure ~ age + dist.f, id = id, data = dat2_axis, corstr = "independence", family = "gaussian")
 save(geelm_axis, file = "data/axis-gee-model.RData")
 
+cov_axis = geelm_axis$geese$vbeta
 se = summary(geelm_axis)$coefficients[,2]
-gee_tab = data.frame(Coef = coef(geelm_axis), SE = se, "L" = coef(geelm_axis) - se * qnorm(0.975), "U" = coef(geelm_axis) + se * qnorm(0.975), pvalue = summary(geelm_axis)$coefficients[,5]) 
+gee_tab = data.frame(Coef = coef(geelm_axis), SE = se, "L" = coef(geelm_axis) - se * qnorm(0.975), "U" = coef(geelm_axis) + se * qnorm(0.975), pvalue = summary(geelm_axis)$coefficients[,4]) 
 
 kable(gee_tab, caption = "GEE Results with Robust S.E") %>%
         kable_styling()
@@ -275,50 +313,114 @@ kable(gee_tab, caption = "GEE Results with Robust S.E") %>%
 
 ```{r mydata}
 dist_level = 4
-mydata = data.frame(intercept = rep(1,dist_level*100), age = rep(1:100, dist_level))
-dist.f = as.factor(rep(c(1:dist_level), each = 100))
-dist_tmp = model.matrix(~ dist.f)[,-1]
-colnames(dist_tmp) = paste("dist.f", c(2:dist_level), sep = "")
-        
-mydata = as.matrix(cbind(mydata, dist_tmp))
+# mydata = data.frame(intercept = rep(1,dist_level*100), age = rep(1:100, dist_level))
+# dist.f = as.factor(rep(c(1:dist_level), each = 100))
+# dist_tmp = model.matrix(~ dist.f)[,-1]
+# colnames(dist_tmp) = paste("dist.f", c(2:dist_level), sep = "")
+#         
+# mydata = as.matrix(cbind(mydata, dist_tmp))
+
+# change dist.f as dummy variable
+dist.mat = matrix(NA, ncol = 3, nrow = nrow(dat2))
+for (i in 1: nrow(dat2)) {
+        if(dat2$dist[i]==1) {
+                dist.mat[i,] = c(0,0,0)
+        } else if(dat2$dist[i]==2) {
+                dist.mat[i,] = c(1,0,0)
+        } else if(dat2$dist[i]==3) {
+                dist.mat[i,] = c(0,1,0)
+        } else {
+                dist.mat[i,] = c(0,0,1)
+        }
+}
+mydata = cbind(rep(1, nrow(dat2)), dat2[, c(2)], dist.mat)
+mydata = as.matrix(mydata)
 ```
 ## Area
+Based on our data set, we compute the 95% predicted interval. 
+```{r area-prediction}
+y_area_pred = predict(geelm, newdata = dat2)
+y_area_var = apply(mydata, 1, function(x) x %*% cov %*% as.matrix(x))
+y_area_bias_sq = mean((geelm$residuals)^2)
+y_area_sd = sqrt(y_area_var + y_area_bias_sq)
+L = y_area_pred - 1.96 * y_area_sd
+# negtive in L, change to 0
+L[L < 0] = 0
+U = y_area_pred + 1.96 * y_area_sd
+
+mydata_predict = data.frame(dat2, area_size = y_area_pred, L = L, U=U, included = dat2$measure < U)
+```
+In order to see whether the predicted interval covers the measures, we compute coverage percentage with respect to patient and distance level. 
+```{r area-coverage-rate-table}
+area_cover.df = mydata_predict %>% 
+        group_by(id, dist.f,age) %>%
+        summarise(n = n(), cover_num = sum(included), cover_pr = cover_num / n)
+area_cover.df
+```
+
+```{r area-coverage-rate-fig}
+area_cover.df %>% 
+        ggplot(aes(x = age, y=cover_pr)) + 
+        geom_point(size = 2, alpha = 0.5) +
+        geom_hline(yintercept = 0.95, color = "red", size = 2) + 
+        x + 
+        facet_wrap(~ dist.f)  +
+        xlab("Age") + 
+        ylab("Coverage Probability") + 
+        theme_bw() + 
+        thm
+```
+
 ```{r AreaMydata, fig.cap="Area: prediction with 95% CI"}
-mydata_y = mydata %*% as.matrix(coef(geelm))
-sd_vec = summary(geelm)$coefficients[, "Robust S.E."]
-var_mat = diag(sd_vec^2)
-mydata_sd = sqrt(apply(mydata, 1, function(x) t(x) %*% var_mat %*% x))
-
-L = mydata_y - 1.96 * mydata_sd
-U = mydata_y + 1.96 * mydata_sd
-
-mydata_predict = data.frame(age = rep(1:100, dist_level), dist.f = as.factor(rep(1:dist_level, each = 100)), area_size = mydata_y, L = L, U=U)
-
-mydata_predict %>% ggplot(aes(x = age, fill=dist.f)) + 
-        geom_ribbon(aes(ymin=L, ymax = U), alpha = 0.3) + 
-        geom_line(aes(y = area_size, color = dist.f)) + 
-        scale_x_continuous(breaks = seq(0, 100, 5)) +
-        #ylim(c(0,80))+
-        #scale_y_continuous(breaks = seq(0,80,5)) +
-        theme_bw()
+mydata_predict %>% ggplot(aes(x = age)) + 
+        #geom_point(aes(y = measure), size = 1, color = "gray", alpha = 0.5) + 
+        geom_ribbon(aes(ymin=L, ymax = U), alpha = 0.3, color = "red") + 
+        geom_line(aes(y = area_size), size = 1) + 
+        x + 
+        facet_wrap(~ dist.f)  +
+        xlab("Age") + 
+        ylab("Measure") + 
+        theme_bw() + 
+        thm
 ```
 ## Axis
 ```{r axisMydata, fig.cap="Axis: prediction with 95% CI"}
-mydata_y = mydata %*% as.matrix(coef(geelm_axis))
-sd_vec = summary(geelm_axis)$coefficients[, "Robust S.E."]
-var_mat = diag(sd_vec^2)
-mydata_sd = sqrt(apply(mydata, 1, function(x) t(x) %*% var_mat %*% x))
+y_axis_pred = predict(geelm_axis, newdata = dat2_axis)
+y_axis_var = apply(mydata, 1, function(x) x %*% cov_axis %*% as.matrix(x))    
+y_axis_bias_sq = mean((geelm_axis$residuals)^2)
+y_axis_sd = sqrt(y_axis_var + y_axis_bias_sq)
+L = y_axis_pred - 1.96 * y_axis_sd
+# negtive in L, change to 0
+L[L < 0] = 0
+U = y_axis_pred + 1.96 * y_axis_sd
 
-L = mydata_y - 1.96 * mydata_sd
-U = mydata_y + 1.96 * mydata_sd
+mydata_predict = data.frame(dat2_axis, area_size = y_axis_pred, L = L, U=U, included = dat2_axis$measure < U) 
 
-mydata_predict = data.frame(age = rep(1:100, dist_level), dist.f = as.factor(rep(1:dist_level, each = 100)), axis_size = mydata_y, L = L, U=U)
+axis_cover.df = mydata_predict %>% 
+        group_by(id, dist.f,age) %>%
+        summarise(n = n(), cover_num = sum(included), cover_pr = cover_num / n)
+axis_cover.df
 
-mydata_predict %>% ggplot(aes(x = age, fill=dist.f)) + 
-        geom_ribbon(aes(ymin=L, ymax = U), alpha = 0.3) + 
-        geom_line(aes(y = axis_size, color = dist.f)) + 
-        scale_x_continuous(breaks = seq(0, 100, 5)) +
-        #ylim(c(0,80))+
-        #scale_y_continuous(breaks = seq(0,80,5)) +
-        theme_bw()
+axis_cover.df %>% 
+        ggplot(aes(x = age, y=cover_pr)) + 
+        geom_point(size = 2, alpha = 0.5) +
+        geom_hline(yintercept = 0.95, color = "red", size = 2) + 
+        x + 
+        facet_wrap(~ dist.f)  +
+        xlab("Age") + 
+        ylab("Coverage Probability") + 
+        theme_bw() + 
+        thm
+
+
+mydata_predict %>% ggplot(aes(x = age)) + 
+        #geom_point(aes(y = measure), size = 1, color = "gray", alpha = 0.5) + 
+        geom_ribbon(aes(ymin=L, ymax = U), alpha = 0.3, color = "red") + 
+        geom_line(aes(y = area_size), size = 1) + 
+        x + 
+        facet_wrap(~ dist.f)  +
+        xlab("Age") + 
+        ylab("Measure") + 
+        theme_bw() + 
+        thm
 ```
